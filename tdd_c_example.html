@@ -1,3 +1,49 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h1> Firefox this file to kick off: </h1>
+
+<h2>Linux SPI device and driver</h2>
+<a href="https://www.eet-china.com/mp/a41757.html">SPI_example_Mandarin</a>
+<p> 
+首先，transfer_list链表字段用于把该transfer挂在一个spi_message结构中，tx_buf和rx_buf提供了非dma模式下的数据缓冲区地址，len则是需要传输数据的长度，tx_dma和rx_dma则给出了dma模式下的缓冲区地址。原则来讲，spi_transfer才是传输的最小单位，之所以又引进了spi_message进行打包，我觉得原因是：有时候希望往spi设备的多个不连续的地址（或寄存器）一次性写入，如果没有spi_message进行把这样的多个spi_transfer打包，因为通常真正的数据传送工作是在另一个内核线程（工作队列）中完成的，不打包的后果就是会造成更多的进程切换，效率降低，延迟增加，尤其对于多个不连续地址的小规模数据传送而言就更为明显。
+</p>
+<br>
+<a href="https://www.cnblogs.com/xinghuo123/p/12992015.html">SPI_example_src</a>
+<br>
+
+<h2> backtrace and backtrace_symbols </h2>
+<p> kernel space: dump_stack() </p>
+<a href="https://linux.die.net/man/3/backtrace">User Space backtrace</a>
+<p>
+#include <execinfo.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#define SIZE 100
+void userspace_backtrace(void)
+{
+    int j, nptrs;
+    void *buffer[SIZE];
+    char **strings;
+
+   nptrs = backtrace(buffer, SIZE);
+    printf("backtrace() returned %d addresses\n", nptrs);
+
+   /* The call backtrace_symbols_fd(buffer, nptrs, STDOUT_FILENO)
+       would produce similar output to the following: */
+
+   strings = backtrace_symbols(buffer, nptrs);
+    if (strings == NULL) {
+        printf("NO backtrace_symbols");
+    }
+   for (j = 0; j < nptrs; j++)
+        printf("%s\n", strings[j]);
+   free(strings);
+}
+</p>
+<h2> C TDD </h2>
 <a href="https://eradman.com/posts/tdd-in-c.html">eradman tdd</a>
 <br>
 <a href="https://www.embedded.com/modern-unit-testing-in-c-with-tdd-and-ceedling/">embedded.com</a>
@@ -5,5 +51,7 @@
 <a href="https://barrgroup.com/embedded-systems/training-courses/test-driven-development">embedded-unittest</a>
 <br>
 
+</body>
+</html>
 
 
