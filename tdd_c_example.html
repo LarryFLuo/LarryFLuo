@@ -4,6 +4,26 @@
 <h1> Firefox this file to kick off: </h1>
 
 <h2>Linux SPI device and driver</h2>
+<a href="https://www.cnblogs.com/bigfish0506/p/14880552.html">Linux SPI driver Mandarin</a>
+<a href="https://www.cnblogs.com/bigfish0506/">Linux driver Mandarin</a>
+<p>
+最底层是硬件层，对应芯片内部 SPI controller 和 挂在 SPI 总线上的外部设备；中间层是内核层，对应 SPI 驱动；最顶层是用户空间的应用程序。
+
+位于内核层的 SPI 驱动，Linux kernel 抽象出了 spi core，屏蔽掉各厂商 spi controller 的差异，对上为 spi device driver 提供统一接口，对下为各芯片厂商实现 spi controller driver 接入spi core 提供统一接口。
+
+为了用户空间应用程序能直接操作 spi，kernel 除了抽象出 spi core，还实现了 spidev 程序。spidev 主要有两部分构成：虚拟的 spi 设备驱动 + 字符设备，前者利用 spi core 提供的接口操作 spi，后者提供 read/write/ioctl 接口给用户空间。
+
+与 spidev 同一层的 specific spi device driver，指的是各个 spi 外设在内核空间实现的驱动程序，也是利用 spi core 提供的接口操作 spi。也就是说，如果要在用户空间驱动 spi 外设，那可以使用 spidev 提供的接口；如果是在内核空间驱动 spi 外设，那就无需用到 spidev，直接在内核空间编写驱动即可。
+
+作为芯片厂商，如果芯片内置了 spi controller，那么就需要实现 spi contorller driver。结合某芯片平台示例，编写 spi controller driver 的主要步骤如下：
+
+ 1、定义 platform device 和 platform driver，并注册到 platform
+ 2、定义 spi_controller（又称 spi_master） 并注册到 spi core。下图代码经过精简。如红色箭头所示，1是分配一个 spi_controller(spi_master) 实例，2是定义 controller 的一些属性和函数操作，3是注册到 spi core 中。
+ 3、实现 spi_controller 的 ops （operations）。
+最关键的 operations 有两个，如上图中红色箭头2所示，set_cs 函数和 transfer_one 函数。set_cs 是操作 spi cs 脚；transfer_one 是操作 spi controller 完成一次 spi transfer。什么是 spi transfer？spi transfer 和 spi message 是 spi core 定义的概念，spi transfer 简单地说就是一次spi读或者写的操作，而一个 spi message 可由一个或者多个 spi transfer 组成。spi transfer 不控制 spi cs脚，而 spi message 控制 spi cs 脚。
+
+下图是set_cs的实现，可以看到有操作芯片 spi controller 的 IO_CONTROL 寄存器的 CS 位。
+</p>
 <a href="https://www.eet-china.com/mp/a41757.html">SPI_example_Mandarin</a>
 <p> 
 首先，transfer_list链表字段用于把该transfer挂在一个spi_message结构中，tx_buf和rx_buf提供了非dma模式下的数据缓冲区地址，len则是需要传输数据的长度，tx_dma和rx_dma则给出了dma模式下的缓冲区地址。原则来讲，spi_transfer才是传输的最小单位，之所以又引进了spi_message进行打包，我觉得原因是：有时候希望往spi设备的多个不连续的地址（或寄存器）一次性写入，如果没有spi_message进行把这样的多个spi_transfer打包，因为通常真正的数据传送工作是在另一个内核线程（工作队列）中完成的，不打包的后果就是会造成更多的进程切换，效率降低，延迟增加，尤其对于多个不连续地址的小规模数据传送而言就更为明显。
